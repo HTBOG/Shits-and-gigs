@@ -71,8 +71,81 @@ h2 {
 }
 
 .credits-display span:first-child {
-    color: #888;
-    margin-right: 10px;
+    color: #ffd700;
+    margin-right: 5px;
+}
+
+/* Music Controls */
+.music-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(145deg, #0a0a15, #15152a);
+    padding: 8px 15px;
+    border-radius: 25px;
+    border: 2px solid #4a4a6a;
+}
+
+.music-btn {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 2px solid #ffd700;
+    background: linear-gradient(145deg, #3a3a5a, #2a2a4a);
+    color: #ffd700;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-btn:hover {
+    background: linear-gradient(145deg, #4a4a6a, #3a3a5a);
+    transform: scale(1.1);
+}
+
+.music-btn.muted {
+    opacity: 0.5;
+    border-color: #666;
+}
+
+.volume-slider {
+    width: 80px;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #ffd700, #ff8c00);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffd700;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    transition: transform 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffd700;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 /* Stage Indicator */

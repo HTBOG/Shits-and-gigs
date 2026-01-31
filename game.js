@@ -12,12 +12,233 @@ class TripleThreatGame {
         this.plinkoBalls = 0;
         this.bonusCards = [];
 
+        // Initialize music first
+        this.initMusic();
+
         // Initialize all games
         this.initSlots();
         this.initPlinko();
         this.initBlackjack();
         this.bindGlobalEvents();
         this.updateDisplay();
+    }
+
+    // ==================== MUSIC SYSTEM ====================
+
+    initMusic() {
+        this.audioContext = null;
+        this.musicPlaying = false;
+        this.musicVolume = 0.5;
+        this.musicNodes = [];
+
+        // Bind music controls
+        document.getElementById('music-toggle').addEventListener('click', () => this.toggleMusic());
+        document.getElementById('volume-slider').addEventListener('input', (e) => {
+            this.musicVolume = e.target.value / 100;
+            this.updateMusicVolume();
+        });
+    }
+
+    startAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.audioContext.createGain();
+            this.masterGain.connect(this.audioContext.destination);
+            this.masterGain.gain.value = this.musicVolume;
+        }
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    }
+
+    toggleMusic() {
+        const btn = document.getElementById('music-toggle');
+
+        if (this.musicPlaying) {
+            this.stopMusic();
+            btn.textContent = '🔇';
+            btn.classList.add('muted');
+        } else {
+            this.startMusic();
+            btn.textContent = '🔊';
+            btn.classList.remove('muted');
+        }
+    }
+
+    updateMusicVolume() {
+        if (this.masterGain) {
+            this.masterGain.gain.value = this.musicVolume;
+        }
+    }
+
+    startMusic() {
+        this.startAudioContext();
+        this.musicPlaying = true;
+        this.playFunkyBeat();
+    }
+
+    stopMusic() {
+        this.musicPlaying = false;
+        this.musicNodes.forEach(node => {
+            try { node.stop(); } catch(e) {}
+        });
+        this.musicNodes = [];
+    }
+
+    playFunkyBeat() {
+        if (!this.musicPlaying) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+        const bpm = 120;
+        const beatDuration = 60 / bpm;
+        const barDuration = beatDuration * 4;
+
+        // Funky bass line pattern (notes in Hz)
+        const bassNotes = [
+            { note: 82.41, time: 0 },         // E2
+            { note: 82.41, time: 0.5 },
+            { note: 98.00, time: 1 },         // G2
+            { note: 110.00, time: 1.5 },      // A2
+            { note: 82.41, time: 2 },         // E2
+            { note: 73.42, time: 2.5 },       // D2
+            { note: 82.41, time: 3 },         // E2
+            { note: 98.00, time: 3.5 },       // G2
+        ];
+
+        // Funky chord stabs
+        const chordTimes = [0.25, 1.25, 2.25, 3.25];
+        const chordFreqs = [329.63, 415.30, 493.88]; // E4, G#4, B4
+
+        // Create bass notes
+        bassNotes.forEach(({ note, time }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.value = note;
+
+            gain.gain.setValueAtTime(0.3, now + time * beatDuration);
+            gain.gain.exponentialDecayTo = 0.01;
+            gain.gain.setValueAtTime(0.3, now + time * beatDuration);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + (time + 0.4) * beatDuration);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            osc.start(now + time * beatDuration);
+            osc.stop(now + (time + 0.5) * beatDuration);
+
+            this.musicNodes.push(osc);
+        });
+
+        // Create chord stabs
+        chordTimes.forEach(time => {
+            chordFreqs.forEach(freq => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.value = freq;
+
+                gain.gain.setValueAtTime(0.1, now + time * beatDuration);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + (time + 0.15) * beatDuration);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                osc.start(now + time * beatDuration);
+                osc.stop(now + (time + 0.2) * beatDuration);
+
+                this.musicNodes.push(osc);
+            });
+        });
+
+        // Hi-hat pattern
+        for (let i = 0; i < 8; i++) {
+            const noise = this.createNoise(ctx);
+            const hihatGain = ctx.createGain();
+            const hihatFilter = ctx.createBiquadFilter();
+
+            hihatFilter.type = 'highpass';
+            hihatFilter.frequency.value = 8000;
+
+            const startTime = now + i * 0.5 * beatDuration;
+            hihatGain.gain.setValueAtTime(i % 2 === 0 ? 0.1 : 0.05, startTime);
+            hihatGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.05);
+
+            noise.connect(hihatFilter);
+            hihatFilter.connect(hihatGain);
+            hihatGain.connect(this.masterGain);
+
+            noise.start(startTime);
+            noise.stop(startTime + 0.1);
+
+            this.musicNodes.push(noise);
+        }
+
+        // Kick drum on beats 1 and 3
+        [0, 2].forEach(beat => {
+            const kick = ctx.createOscillator();
+            const kickGain = ctx.createGain();
+
+            kick.frequency.setValueAtTime(150, now + beat * beatDuration);
+            kick.frequency.exponentialRampToValueAtTime(50, now + beat * beatDuration + 0.1);
+
+            kickGain.gain.setValueAtTime(0.5, now + beat * beatDuration);
+            kickGain.gain.exponentialRampToValueAtTime(0.01, now + beat * beatDuration + 0.2);
+
+            kick.connect(kickGain);
+            kickGain.connect(this.masterGain);
+
+            kick.start(now + beat * beatDuration);
+            kick.stop(now + beat * beatDuration + 0.3);
+
+            this.musicNodes.push(kick);
+        });
+
+        // Snare on beats 2 and 4
+        [1, 3].forEach(beat => {
+            const snareNoise = this.createNoise(ctx);
+            const snareGain = ctx.createGain();
+            const snareFilter = ctx.createBiquadFilter();
+
+            snareFilter.type = 'bandpass';
+            snareFilter.frequency.value = 3000;
+
+            snareGain.gain.setValueAtTime(0.3, now + beat * beatDuration);
+            snareGain.gain.exponentialRampToValueAtTime(0.01, now + beat * beatDuration + 0.15);
+
+            snareNoise.connect(snareFilter);
+            snareFilter.connect(snareGain);
+            snareGain.connect(this.masterGain);
+
+            snareNoise.start(now + beat * beatDuration);
+            snareNoise.stop(now + beat * beatDuration + 0.2);
+
+            this.musicNodes.push(snareNoise);
+        });
+
+        // Schedule next bar
+        setTimeout(() => {
+            if (this.musicPlaying) {
+                this.playFunkyBeat();
+            }
+        }, barDuration * 1000);
+    }
+
+    createNoise(ctx) {
+        const bufferSize = ctx.sampleRate * 0.5;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        return noise;
     }
 
     // ==================== STAGE MANAGEMENT ====================
@@ -68,14 +289,25 @@ class TripleThreatGame {
     }
 
     resetGame() {
-        this.credits = 1000;
-        this.bet = 10;
+        // Keep current credits instead of resetting - only reset if broke
+        if (this.credits < this.minBet) {
+            this.credits = 1000; // Only reset if player is out of money
+        }
+
+        // Ensure bet doesn't exceed current credits
+        this.bet = Math.min(this.bet, this.credits);
+        if (this.bet < this.minBet) {
+            this.bet = this.minBet;
+        }
+
         this.plinkoBalls = 0;
         this.bonusCards = [];
         this.currentStage = 'slots';
 
         // Reset UI
         document.getElementById('play-again-container').classList.add('hidden');
+        document.getElementById('blackjack-result').textContent = '';
+        document.getElementById('blackjack-result').className = 'blackjack-result';
         document.querySelectorAll('.stage').forEach(s => s.classList.remove('completed', 'active'));
         document.querySelector('[data-stage="slots"]').classList.add('active');
 
