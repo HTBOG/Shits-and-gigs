@@ -3,62 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Slots</title>
+    <title>Triple Threat Casino</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="game-container">
         <header>
-            <h1>🎰 LUCKY SLOTS 🎰</h1>
-            <div class="credits-display">
-                <span>Credits:</span>
-                <span id="credits">1000</span>
+            <h1>🎰 TRIPLE THREAT 🎲</h1>
+            <div class="header-info">
+                <div class="credits-display">
+                    <span>Credits:</span>
+                    <span id="credits">1000</span>
+                </div>
+                <div class="stage-indicator">
+                    <span class="stage active" data-stage="slots">1. SLOTS</span>
+                    <span class="arrow">→</span>
+                    <span class="stage" data-stage="plinko">2. PLINKO</span>
+                    <span class="arrow">→</span>
+                    <span class="stage" data-stage="blackjack">3. BLACKJACK</span>
+                </div>
             </div>
         </header>
 
-        <div class="slot-machine">
-            <div class="machine-frame">
-                <div class="reels-container">
-                    <div class="reel" id="reel1">
-                        <div class="symbols"></div>
+        <!-- STAGE 1: SLOTS -->
+        <div id="slots-stage" class="game-stage active">
+            <h2>🎰 SLOTS - Spin to Start!</h2>
+            <div class="slot-machine">
+                <div class="machine-frame">
+                    <div class="reels-container">
+                        <div class="reel" id="reel1">
+                            <div class="symbols"></div>
+                        </div>
+                        <div class="reel" id="reel2">
+                            <div class="symbols"></div>
+                        </div>
+                        <div class="reel" id="reel3">
+                            <div class="symbols"></div>
+                        </div>
                     </div>
-                    <div class="reel" id="reel2">
-                        <div class="symbols"></div>
-                    </div>
-                    <div class="reel" id="reel3">
-                        <div class="symbols"></div>
-                    </div>
+                    <div class="win-line"></div>
                 </div>
-                <div class="win-line"></div>
+            </div>
+
+            <div class="controls">
+                <div class="bet-controls">
+                    <button id="bet-down" class="bet-btn">-</button>
+                    <div class="bet-display">
+                        <span>BET:</span>
+                        <span id="bet-amount">10</span>
+                    </div>
+                    <button id="bet-up" class="bet-btn">+</button>
+                </div>
+                <button id="spin-btn" class="spin-button">SPIN</button>
+                <button id="max-bet-btn" class="max-bet-button">MAX BET</button>
+            </div>
+
+            <div class="slots-info">
+                <p>Match symbols to earn Plinko balls! More matches = More balls!</p>
+                <div class="paytable-mini">
+                    <span>💎💎💎 = 5 balls</span>
+                    <span>7️⃣7️⃣7️⃣ = 4 balls</span>
+                    <span>Any 3 = 3 balls</span>
+                    <span>Any 2 = 1 ball</span>
+                </div>
             </div>
         </div>
 
-        <div class="controls">
-            <div class="bet-controls">
-                <button id="bet-down" class="bet-btn">-</button>
-                <div class="bet-display">
-                    <span>BET:</span>
-                    <span id="bet-amount">10</span>
-                </div>
-                <button id="bet-up" class="bet-btn">+</button>
+        <!-- STAGE 2: PLINKO -->
+        <div id="plinko-stage" class="game-stage">
+            <h2>🔴 PLINKO - Drop for Cards!</h2>
+            <div class="plinko-info">
+                <span>Balls remaining: <strong id="balls-remaining">0</strong></span>
             </div>
-            <button id="spin-btn" class="spin-button">SPIN</button>
-            <button id="max-bet-btn" class="max-bet-button">MAX BET</button>
+
+            <div class="plinko-container">
+                <canvas id="plinko-canvas" width="400" height="500"></canvas>
+                <div class="plinko-slots">
+                    <div class="plinko-slot" data-value="2">2</div>
+                    <div class="plinko-slot" data-value="3">3</div>
+                    <div class="plinko-slot" data-value="4">4</div>
+                    <div class="plinko-slot" data-value="5">5</div>
+                    <div class="plinko-slot" data-value="A">A</div>
+                    <div class="plinko-slot" data-value="5">5</div>
+                    <div class="plinko-slot" data-value="4">4</div>
+                    <div class="plinko-slot" data-value="3">3</div>
+                    <div class="plinko-slot" data-value="2">2</div>
+                </div>
+            </div>
+
+            <div class="plinko-controls">
+                <button id="drop-btn" class="drop-button">DROP BALL</button>
+                <button id="skip-plinko-btn" class="skip-button">SKIP TO BLACKJACK</button>
+            </div>
+
+            <div class="collected-cards">
+                <span>Cards collected: </span>
+                <div id="plinko-cards"></div>
+            </div>
         </div>
 
+        <!-- STAGE 3: BLACKJACK -->
+        <div id="blackjack-stage" class="game-stage">
+            <h2>🃏 BLACKJACK - Beat the Dealer!</h2>
+
+            <div class="blackjack-table">
+                <div class="dealer-area">
+                    <h3>Dealer <span id="dealer-score"></span></h3>
+                    <div id="dealer-cards" class="cards"></div>
+                </div>
+
+                <div class="player-area">
+                    <h3>Your Hand <span id="player-score"></span></h3>
+                    <div id="player-cards" class="cards"></div>
+                </div>
+            </div>
+
+            <div class="bonus-cards-display">
+                <span>Bonus cards from Plinko: </span>
+                <div id="bonus-cards"></div>
+            </div>
+
+            <div class="blackjack-controls">
+                <button id="hit-btn" class="bj-button hit">HIT</button>
+                <button id="stand-btn" class="bj-button stand">STAND</button>
+                <button id="use-bonus-btn" class="bj-button bonus">USE BONUS CARD</button>
+            </div>
+
+            <div id="blackjack-result" class="blackjack-result"></div>
+        </div>
+
+        <!-- Message Display -->
         <div id="message" class="message"></div>
 
-        <div class="paytable">
-            <h3>Paytable</h3>
-            <div class="paytable-items">
-                <div class="pay-item"><span>💎💎💎</span><span>x100</span></div>
-                <div class="pay-item"><span>7️⃣7️⃣7️⃣</span><span>x50</span></div>
-                <div class="pay-item"><span>🍒🍒🍒</span><span>x25</span></div>
-                <div class="pay-item"><span>🍋🍋🍋</span><span>x15</span></div>
-                <div class="pay-item"><span>🍊🍊🍊</span><span>x10</span></div>
-                <div class="pay-item"><span>🍇🍇🍇</span><span>x5</span></div>
-                <div class="pay-item"><span>🍒🍒❓</span><span>x2</span></div>
-            </div>
+        <!-- Play Again -->
+        <div id="play-again-container" class="play-again-container hidden">
+            <button id="play-again-btn" class="play-again-button">PLAY AGAIN</button>
         </div>
     </div>
 

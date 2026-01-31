@@ -1,7 +1,92 @@
-// Slot Machine Game
-class SlotMachine {
+// Triple Threat Casino - Slots -> Plinko -> Blackjack
+class TripleThreatGame {
     constructor() {
-        // Symbols with their weights (higher weight = more common)
+        this.credits = 1000;
+        this.bet = 10;
+        this.minBet = 5;
+        this.maxBet = 100;
+        this.betStep = 5;
+
+        // Game state
+        this.currentStage = 'slots';
+        this.plinkoBalls = 0;
+        this.bonusCards = [];
+
+        // Initialize all games
+        this.initSlots();
+        this.initPlinko();
+        this.initBlackjack();
+        this.bindGlobalEvents();
+        this.updateDisplay();
+    }
+
+    // ==================== STAGE MANAGEMENT ====================
+
+    switchStage(stage) {
+        // Update stage indicators
+        document.querySelectorAll('.stage').forEach(s => {
+            s.classList.remove('active');
+            if (this.getStageOrder(s.dataset.stage) < this.getStageOrder(stage)) {
+                s.classList.add('completed');
+            }
+        });
+        document.querySelector(`[data-stage="${stage}"]`).classList.add('active');
+
+        // Switch visible stage
+        document.querySelectorAll('.game-stage').forEach(s => s.classList.remove('active'));
+        document.getElementById(`${stage}-stage`).classList.add('active');
+
+        this.currentStage = stage;
+        this.clearMessage();
+    }
+
+    getStageOrder(stage) {
+        const order = { slots: 0, plinko: 1, blackjack: 2 };
+        return order[stage] || 0;
+    }
+
+    showMessage(text, type = '') {
+        const msg = document.getElementById('message');
+        msg.textContent = text;
+        msg.className = `message ${type}`;
+    }
+
+    clearMessage() {
+        const msg = document.getElementById('message');
+        msg.textContent = '';
+        msg.className = 'message';
+    }
+
+    updateDisplay() {
+        document.getElementById('credits').textContent = this.credits;
+        document.getElementById('bet-amount').textContent = this.bet;
+        document.getElementById('balls-remaining').textContent = this.plinkoBalls;
+    }
+
+    bindGlobalEvents() {
+        document.getElementById('play-again-btn').addEventListener('click', () => this.resetGame());
+    }
+
+    resetGame() {
+        this.credits = 1000;
+        this.bet = 10;
+        this.plinkoBalls = 0;
+        this.bonusCards = [];
+        this.currentStage = 'slots';
+
+        // Reset UI
+        document.getElementById('play-again-container').classList.add('hidden');
+        document.querySelectorAll('.stage').forEach(s => s.classList.remove('completed', 'active'));
+        document.querySelector('[data-stage="slots"]').classList.add('active');
+
+        this.switchStage('slots');
+        this.updateDisplay();
+        this.setupReelSymbols();
+    }
+
+    // ==================== SLOTS ====================
+
+    initSlots() {
         this.symbols = [
             { emoji: '🍇', name: 'grapes', weight: 25 },
             { emoji: '🍊', name: 'orange', weight: 20 },
@@ -11,60 +96,24 @@ class SlotMachine {
             { emoji: '💎', name: 'diamond', weight: 4 }
         ];
 
-        // Payouts for matching symbols (multiplier of bet)
-        this.payouts = {
-            'diamond': 100,
-            'seven': 50,
-            'cherry': 25,
-            'lemon': 15,
-            'orange': 10,
-            'grapes': 5
-        };
-
-        // Game state
-        this.credits = 1000;
-        this.bet = 10;
-        this.minBet = 5;
-        this.maxBet = 100;
-        this.betStep = 5;
-        this.isSpinning = false;
-
-        // DOM elements
         this.reels = [
             document.getElementById('reel1'),
             document.getElementById('reel2'),
             document.getElementById('reel3')
         ];
-        this.creditsDisplay = document.getElementById('credits');
-        this.betDisplay = document.getElementById('bet-amount');
-        this.messageDisplay = document.getElementById('message');
-        this.spinButton = document.getElementById('spin-btn');
-        this.betUpButton = document.getElementById('bet-up');
-        this.betDownButton = document.getElementById('bet-down');
-        this.maxBetButton = document.getElementById('max-bet-btn');
-        this.winLine = document.querySelector('.win-line');
-        this.gameContainer = document.querySelector('.game-container');
+        this.isSpinning = false;
+        this.finalSymbols = [];
 
-        // Current reel positions (for animation)
-        this.reelPositions = [0, 0, 0];
-        this.finalSymbols = ['', '', ''];
-
-        this.init();
-    }
-
-    init() {
         this.setupReelSymbols();
-        this.bindEvents();
-        this.updateDisplay();
+        this.bindSlotEvents();
     }
 
     setupReelSymbols() {
-        // Create a strip of symbols for each reel
-        this.reels.forEach((reel, index) => {
+        this.reels.forEach(reel => {
             const symbolsContainer = reel.querySelector('.symbols');
             symbolsContainer.innerHTML = '';
+            symbolsContainer.style.transform = 'translateY(0)';
 
-            // Create enough symbols for smooth animation (20 symbols per reel)
             for (let i = 0; i < 20; i++) {
                 const symbolDiv = document.createElement('div');
                 symbolDiv.className = 'symbol';
@@ -75,28 +124,24 @@ class SlotMachine {
     }
 
     getRandomSymbol() {
-        // Weighted random selection
         const totalWeight = this.symbols.reduce((sum, s) => sum + s.weight, 0);
         let random = Math.random() * totalWeight;
 
         for (const symbol of this.symbols) {
             random -= symbol.weight;
-            if (random <= 0) {
-                return symbol;
-            }
+            if (random <= 0) return symbol;
         }
         return this.symbols[0];
     }
 
-    bindEvents() {
-        this.spinButton.addEventListener('click', () => this.spin());
-        this.betUpButton.addEventListener('click', () => this.changeBet(this.betStep));
-        this.betDownButton.addEventListener('click', () => this.changeBet(-this.betStep));
-        this.maxBetButton.addEventListener('click', () => this.setMaxBet());
+    bindSlotEvents() {
+        document.getElementById('spin-btn').addEventListener('click', () => this.spin());
+        document.getElementById('bet-up').addEventListener('click', () => this.changeBet(this.betStep));
+        document.getElementById('bet-down').addEventListener('click', () => this.changeBet(-this.betStep));
+        document.getElementById('max-bet-btn').addEventListener('click', () => this.setMaxBet());
 
-        // Keyboard support
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !this.isSpinning) {
+            if (e.code === 'Space' && this.currentStage === 'slots' && !this.isSpinning) {
                 e.preventDefault();
                 this.spin();
             }
@@ -105,7 +150,6 @@ class SlotMachine {
 
     changeBet(amount) {
         if (this.isSpinning) return;
-
         const newBet = this.bet + amount;
         if (newBet >= this.minBet && newBet <= this.maxBet && newBet <= this.credits) {
             this.bet = newBet;
@@ -115,34 +159,20 @@ class SlotMachine {
 
     setMaxBet() {
         if (this.isSpinning) return;
-
         this.bet = Math.min(this.maxBet, this.credits);
         this.updateDisplay();
-    }
-
-    updateDisplay() {
-        this.creditsDisplay.textContent = this.credits;
-        this.betDisplay.textContent = this.bet;
-
-        // Disable spin if not enough credits
-        this.spinButton.disabled = this.credits < this.bet || this.isSpinning;
     }
 
     async spin() {
         if (this.isSpinning || this.credits < this.bet) return;
 
         this.isSpinning = true;
-        this.spinButton.disabled = true;
-        this.spinButton.classList.add('spinning');
+        document.getElementById('spin-btn').disabled = true;
 
-        // Deduct bet
         this.credits -= this.bet;
         this.updateDisplay();
-
-        // Clear previous messages
-        this.messageDisplay.textContent = '';
-        this.messageDisplay.className = 'message';
-        this.winLine.classList.remove('active');
+        this.clearMessage();
+        document.querySelector('.win-line').classList.remove('active');
 
         // Determine final symbols
         this.finalSymbols = [
@@ -151,133 +181,597 @@ class SlotMachine {
             this.getRandomSymbol()
         ];
 
-        // Animate reels
         await this.animateReels();
-
-        // Check for wins
-        this.checkWin();
+        this.checkSlotWin();
 
         this.isSpinning = false;
-        this.spinButton.classList.remove('spinning');
-        this.updateDisplay();
+        document.getElementById('spin-btn').disabled = false;
     }
 
     async animateReels() {
-        const spinDurations = [1500, 2000, 2500]; // Different durations for each reel
-        const promises = this.reels.map((reel, index) =>
-            this.animateReel(reel, index, spinDurations[index])
-        );
-
+        const durations = [1500, 2000, 2500];
+        const promises = this.reels.map((reel, i) => this.animateReel(reel, i, durations[i]));
         await Promise.all(promises);
     }
 
     animateReel(reel, index, duration) {
-        return new Promise((resolve) => {
-            const symbolsContainer = reel.querySelector('.symbols');
-            const symbolHeight = 120; // Height of each symbol
-            const symbols = symbolsContainer.querySelectorAll('.symbol');
+        return new Promise(resolve => {
+            const container = reel.querySelector('.symbols');
+            const symbols = container.querySelectorAll('.symbol');
+            const symbolHeight = 100;
+            const finalPos = symbols.length - 3;
 
-            // Add spinning class
+            symbols[finalPos].textContent = this.finalSymbols[index].emoji;
             reel.classList.add('spinning');
 
-            // Reset position
-            let position = 0;
             const startTime = Date.now();
-            const totalSymbols = symbols.length;
+            const totalDistance = (symbols.length - 4) * symbolHeight;
 
-            // Set the final symbol at a specific position
-            const finalPosition = totalSymbols - 3; // Landing position
-            symbols[finalPosition].textContent = this.finalSymbols[index].emoji;
+            const randomize = setInterval(() => {
+                symbols.forEach((s, i) => {
+                    if (i !== finalPos) s.textContent = this.getRandomSymbol().emoji;
+                });
+            }, 50);
 
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
 
-                // Easing function for smooth deceleration
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-
-                // Calculate target position
-                const totalDistance = (totalSymbols - 4) * symbolHeight;
-                position = easeOut * totalDistance;
-
-                symbolsContainer.style.transform = `translateY(-${position}px)`;
+                container.style.transform = `translateY(-${ease * totalDistance}px)`;
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     reel.classList.remove('spinning');
+                    clearInterval(randomize);
                     resolve();
                 }
             };
 
-            // Randomize other symbols during spin
-            const randomizeInterval = setInterval(() => {
-                symbols.forEach((symbol, i) => {
-                    if (i !== finalPosition) {
-                        symbol.textContent = this.getRandomSymbol().emoji;
-                    }
-                });
-            }, 50);
-
-            setTimeout(() => clearInterval(randomizeInterval), duration - 200);
-
+            setTimeout(() => clearInterval(randomize), duration - 200);
             requestAnimationFrame(animate);
         });
     }
 
-    checkWin() {
-        const symbols = this.finalSymbols;
-        let winAmount = 0;
+    checkSlotWin() {
+        const s = this.finalSymbols;
+        let balls = 1; // Minimum 1 ball to continue
         let message = '';
-        let messageClass = 'lose';
+        let type = '';
 
-        // Check for three of a kind
-        if (symbols[0].name === symbols[1].name && symbols[1].name === symbols[2].name) {
-            const multiplier = this.payouts[symbols[0].name];
-            winAmount = this.bet * multiplier;
+        // Three of a kind
+        if (s[0].name === s[1].name && s[1].name === s[2].name) {
+            document.querySelector('.win-line').classList.add('active');
 
-            if (symbols[0].name === 'diamond') {
-                message = `💎 JACKPOT! 💎 +${winAmount}`;
-                messageClass = 'jackpot';
-            } else if (symbols[0].name === 'seven') {
-                message = `🎉 BIG WIN! 🎉 +${winAmount}`;
-                messageClass = 'jackpot';
+            if (s[0].name === 'diamond') {
+                balls = 5;
+                message = '💎 JACKPOT! 5 Plinko Balls! 💎';
+                type = 'jackpot';
+            } else if (s[0].name === 'seven') {
+                balls = 4;
+                message = '7️⃣ BIG WIN! 4 Plinko Balls! 7️⃣';
+                type = 'jackpot';
             } else {
-                message = `🎊 WIN! +${winAmount}`;
-                messageClass = 'win';
+                balls = 3;
+                message = `🎊 Three ${s[0].emoji}! 3 Plinko Balls!`;
+                type = 'win';
             }
         }
-        // Check for two cherries (partial win)
-        else if (symbols.filter(s => s.name === 'cherry').length === 2) {
-            winAmount = this.bet * 2;
-            message = `🍒 Small win! +${winAmount}`;
-            messageClass = 'win';
+        // Two of any kind
+        else if (s[0].name === s[1].name || s[1].name === s[2].name || s[0].name === s[2].name) {
+            balls = 2;
+            message = '✨ Pair! 2 Plinko Balls!';
+            type = 'win';
         }
         else {
-            message = 'Try again!';
+            message = '1 Plinko Ball - Moving to Plinko!';
         }
 
-        if (winAmount > 0) {
-            this.credits += winAmount;
-            this.winLine.classList.add('active');
-            this.gameContainer.classList.add('celebrating');
-            setTimeout(() => this.gameContainer.classList.remove('celebrating'), 500);
+        this.plinkoBalls = balls;
+        this.updateDisplay();
+        this.showMessage(message, type);
+
+        // Transition to Plinko after delay
+        setTimeout(() => {
+            this.switchStage('plinko');
+            this.initPlinkoBoard();
+        }, 2000);
+    }
+
+    // ==================== PLINKO ====================
+
+    initPlinko() {
+        this.canvas = document.getElementById('plinko-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.plinkoSlots = ['2', '3', '4', '5', 'A', '5', '4', '3', '2'];
+        this.plinkoBall = null;
+        this.plinkoPegs = [];
+        this.isDropping = false;
+
+        this.bindPlinkoEvents();
+    }
+
+    initPlinkoBoard() {
+        // Create pegs
+        this.plinkoPegs = [];
+        const rows = 10;
+        const startY = 50;
+        const rowHeight = 40;
+
+        for (let row = 0; row < rows; row++) {
+            const pegsInRow = row + 3;
+            const rowWidth = (pegsInRow - 1) * 40;
+            const startX = (this.canvas.width - rowWidth) / 2;
+
+            for (let peg = 0; peg < pegsInRow; peg++) {
+                this.plinkoPegs.push({
+                    x: startX + peg * 40,
+                    y: startY + row * rowHeight,
+                    radius: 6
+                });
+            }
         }
 
-        this.messageDisplay.textContent = message;
-        this.messageDisplay.className = `message ${messageClass}`;
+        this.drawPlinkoBoard();
+        this.updateDisplay();
 
-        // Check for game over
-        if (this.credits < this.minBet) {
-            setTimeout(() => {
-                this.messageDisplay.textContent = 'Game Over! Refresh to play again.';
-                this.messageDisplay.className = 'message lose';
-            }, 1500);
+        document.getElementById('drop-btn').disabled = false;
+        document.getElementById('plinko-cards').innerHTML = '';
+    }
+
+    drawPlinkoBoard() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw pegs
+        this.plinkoPegs.forEach(peg => {
+            this.ctx.beginPath();
+            this.ctx.arc(peg.x, peg.y, peg.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#ffd700';
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#cc9900';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        });
+
+        // Draw ball if exists
+        if (this.plinkoBall) {
+            this.ctx.beginPath();
+            this.ctx.arc(this.plinkoBall.x, this.plinkoBall.y, 12, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#cc4444';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
         }
+    }
+
+    bindPlinkoEvents() {
+        document.getElementById('drop-btn').addEventListener('click', () => this.dropBall());
+        document.getElementById('skip-plinko-btn').addEventListener('click', () => this.skipToPlinko());
+    }
+
+    skipToPlinko() {
+        this.plinkoBalls = 0;
+        this.startBlackjack();
+    }
+
+    dropBall() {
+        if (this.isDropping || this.plinkoBalls <= 0) return;
+
+        this.isDropping = true;
+        document.getElementById('drop-btn').disabled = true;
+
+        this.plinkoBall = {
+            x: this.canvas.width / 2 + (Math.random() - 0.5) * 40,
+            y: 20,
+            vx: 0,
+            vy: 0
+        };
+
+        this.animatePlinkoBall();
+    }
+
+    animatePlinkoBall() {
+        const gravity = 0.3;
+        const bounce = 0.7;
+        const friction = 0.99;
+
+        const animate = () => {
+            // Apply gravity
+            this.plinkoBall.vy += gravity;
+            this.plinkoBall.vx *= friction;
+
+            // Update position
+            this.plinkoBall.x += this.plinkoBall.vx;
+            this.plinkoBall.y += this.plinkoBall.vy;
+
+            // Wall collision
+            if (this.plinkoBall.x < 20) {
+                this.plinkoBall.x = 20;
+                this.plinkoBall.vx *= -bounce;
+            }
+            if (this.plinkoBall.x > this.canvas.width - 20) {
+                this.plinkoBall.x = this.canvas.width - 20;
+                this.plinkoBall.vx *= -bounce;
+            }
+
+            // Peg collision
+            this.plinkoPegs.forEach(peg => {
+                const dx = this.plinkoBall.x - peg.x;
+                const dy = this.plinkoBall.y - peg.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const minDist = 12 + peg.radius;
+
+                if (dist < minDist) {
+                    // Normalize collision vector
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+
+                    // Move ball outside peg
+                    this.plinkoBall.x = peg.x + nx * minDist;
+                    this.plinkoBall.y = peg.y + ny * minDist;
+
+                    // Reflect velocity with randomness
+                    const dot = this.plinkoBall.vx * nx + this.plinkoBall.vy * ny;
+                    this.plinkoBall.vx = (this.plinkoBall.vx - 2 * dot * nx) * bounce + (Math.random() - 0.5) * 2;
+                    this.plinkoBall.vy = (this.plinkoBall.vy - 2 * dot * ny) * bounce;
+                }
+            });
+
+            this.drawPlinkoBoard();
+
+            // Check if reached bottom
+            if (this.plinkoBall.y >= this.canvas.height - 20) {
+                this.landBall();
+            } else {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    landBall() {
+        // Determine which slot
+        const slotWidth = this.canvas.width / 9;
+        const slotIndex = Math.min(8, Math.max(0, Math.floor(this.plinkoBall.x / slotWidth)));
+        const cardValue = this.plinkoSlots[slotIndex];
+
+        // Highlight slot
+        const slots = document.querySelectorAll('.plinko-slot');
+        slots[slotIndex].classList.add('highlight');
+        setTimeout(() => slots[slotIndex].classList.remove('highlight'), 500);
+
+        // Add card to collection
+        this.bonusCards.push(cardValue);
+        this.addPlinkoCard(cardValue);
+
+        this.plinkoBall = null;
+        this.plinkoBalls--;
+        this.updateDisplay();
+        this.drawPlinkoBoard();
+
+        this.isDropping = false;
+
+        // Check if done with Plinko
+        if (this.plinkoBalls <= 0) {
+            this.showMessage('All balls dropped! Moving to Blackjack...', 'win');
+            setTimeout(() => this.startBlackjack(), 1500);
+        } else {
+            document.getElementById('drop-btn').disabled = false;
+            this.showMessage(`Got a ${cardValue}! ${this.plinkoBalls} balls remaining.`);
+        }
+    }
+
+    addPlinkoCard(value) {
+        const container = document.getElementById('plinko-cards');
+        const card = document.createElement('div');
+        card.className = 'mini-card';
+        card.textContent = value;
+        container.appendChild(card);
+    }
+
+    // ==================== BLACKJACK ====================
+
+    initBlackjack() {
+        this.deck = [];
+        this.playerHand = [];
+        this.dealerHand = [];
+        this.gameOver = false;
+        this.usedBonusCards = [];
+
+        this.bindBlackjackEvents();
+    }
+
+    bindBlackjackEvents() {
+        document.getElementById('hit-btn').addEventListener('click', () => this.hit());
+        document.getElementById('stand-btn').addEventListener('click', () => this.stand());
+        document.getElementById('use-bonus-btn').addEventListener('click', () => this.useNextBonusCard());
+    }
+
+    startBlackjack() {
+        this.switchStage('blackjack');
+
+        // Create and shuffle deck
+        this.createDeck();
+        this.shuffleDeck();
+
+        // Reset hands
+        this.playerHand = [];
+        this.dealerHand = [];
+        this.gameOver = false;
+        this.usedBonusCards = [];
+
+        // Display bonus cards
+        this.displayBonusCards();
+
+        // Deal initial cards
+        this.dealInitialCards();
+
+        this.updateBlackjackUI();
+        this.enableBlackjackControls(true);
+    }
+
+    createDeck() {
+        this.deck = [];
+        const suits = ['♠', '♥', '♦', '♣'];
+        const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+        for (const suit of suits) {
+            for (const value of values) {
+                this.deck.push({ value, suit });
+            }
+        }
+    }
+
+    shuffleDeck() {
+        for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+        }
+    }
+
+    dealInitialCards() {
+        this.playerHand.push(this.drawCard());
+        this.dealerHand.push(this.drawCard());
+        this.playerHand.push(this.drawCard());
+        this.dealerHand.push({ ...this.drawCard(), hidden: true });
+    }
+
+    drawCard() {
+        return this.deck.pop();
+    }
+
+    displayBonusCards() {
+        const container = document.getElementById('bonus-cards');
+        container.innerHTML = '';
+
+        this.bonusCards.forEach((value, index) => {
+            const card = document.createElement('div');
+            card.className = 'mini-card';
+            card.textContent = value;
+            card.dataset.index = index;
+            card.addEventListener('click', () => this.useBonusCard(index));
+            container.appendChild(card);
+        });
+
+        this.updateBonusButton();
+    }
+
+    updateBonusButton() {
+        const availableBonus = this.bonusCards.filter((_, i) => !this.usedBonusCards.includes(i));
+        document.getElementById('use-bonus-btn').disabled = availableBonus.length === 0 || this.gameOver;
+    }
+
+    useBonusCard(index) {
+        if (this.usedBonusCards.includes(index) || this.gameOver) return;
+
+        const value = this.bonusCards[index];
+        this.usedBonusCards.push(index);
+
+        // Mark card as used
+        const cards = document.querySelectorAll('#bonus-cards .mini-card');
+        cards[index].classList.add('used');
+
+        // Add to player hand with random suit
+        const suits = ['♠', '♥', '♦', '♣'];
+        const suit = suits[Math.floor(Math.random() * suits.length)];
+        this.playerHand.push({ value, suit, bonus: true });
+
+        this.updateBlackjackUI();
+        this.updateBonusButton();
+
+        // Check for bust
+        if (this.calculateHand(this.playerHand) > 21) {
+            this.endBlackjack('bust');
+        }
+    }
+
+    useNextBonusCard() {
+        const nextIndex = this.bonusCards.findIndex((_, i) => !this.usedBonusCards.includes(i));
+        if (nextIndex !== -1) {
+            this.useBonusCard(nextIndex);
+        }
+    }
+
+    hit() {
+        if (this.gameOver) return;
+
+        this.playerHand.push(this.drawCard());
+        this.updateBlackjackUI();
+
+        if (this.calculateHand(this.playerHand) > 21) {
+            this.endBlackjack('bust');
+        }
+    }
+
+    stand() {
+        if (this.gameOver) return;
+
+        // Reveal dealer card
+        this.dealerHand[1].hidden = false;
+        this.updateBlackjackUI();
+
+        // Dealer draws until 17
+        this.dealerPlay();
+    }
+
+    async dealerPlay() {
+        this.enableBlackjackControls(false);
+
+        while (this.calculateHand(this.dealerHand) < 17) {
+            await this.delay(500);
+            this.dealerHand.push(this.drawCard());
+            this.updateBlackjackUI();
+        }
+
+        this.determineWinner();
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    calculateHand(hand) {
+        let total = 0;
+        let aces = 0;
+
+        for (const card of hand) {
+            if (card.hidden) continue;
+
+            if (card.value === 'A') {
+                aces++;
+                total += 11;
+            } else if (['K', 'Q', 'J'].includes(card.value)) {
+                total += 10;
+            } else {
+                total += parseInt(card.value);
+            }
+        }
+
+        // Adjust for aces
+        while (total > 21 && aces > 0) {
+            total -= 10;
+            aces--;
+        }
+
+        return total;
+    }
+
+    determineWinner() {
+        const playerScore = this.calculateHand(this.playerHand);
+        const dealerScore = this.calculateHand(this.dealerHand);
+
+        if (dealerScore > 21) {
+            this.endBlackjack('dealer-bust');
+        } else if (playerScore > dealerScore) {
+            this.endBlackjack('win');
+        } else if (playerScore < dealerScore) {
+            this.endBlackjack('lose');
+        } else {
+            this.endBlackjack('push');
+        }
+    }
+
+    endBlackjack(result) {
+        this.gameOver = true;
+        this.enableBlackjackControls(false);
+
+        const resultDiv = document.getElementById('blackjack-result');
+        let winnings = 0;
+
+        switch (result) {
+            case 'bust':
+                resultDiv.textContent = '💥 BUST! You lose!';
+                resultDiv.className = 'blackjack-result lose';
+                break;
+            case 'dealer-bust':
+                winnings = this.bet * 2;
+                resultDiv.textContent = `🎉 Dealer busts! You win ${winnings} credits!`;
+                resultDiv.className = 'blackjack-result win';
+                break;
+            case 'win':
+                winnings = this.bet * 2;
+                resultDiv.textContent = `🎊 YOU WIN ${winnings} credits!`;
+                resultDiv.className = 'blackjack-result win';
+                break;
+            case 'lose':
+                resultDiv.textContent = '😔 Dealer wins!';
+                resultDiv.className = 'blackjack-result lose';
+                break;
+            case 'push':
+                winnings = this.bet;
+                resultDiv.textContent = '🤝 Push! Bet returned.';
+                resultDiv.className = 'blackjack-result push';
+                break;
+        }
+
+        this.credits += winnings;
+        this.updateDisplay();
+
+        // Show play again button
+        document.getElementById('play-again-container').classList.remove('hidden');
+
+        // Final message
+        setTimeout(() => {
+            if (this.credits < this.minBet) {
+                this.showMessage('Game Over! Out of credits!', 'lose');
+            } else {
+                this.showMessage(`Round complete! Credits: ${this.credits}`, 'win');
+            }
+        }, 500);
+    }
+
+    enableBlackjackControls(enabled) {
+        document.getElementById('hit-btn').disabled = !enabled;
+        document.getElementById('stand-btn').disabled = !enabled;
+        this.updateBonusButton();
+    }
+
+    updateBlackjackUI() {
+        // Update dealer cards
+        const dealerContainer = document.getElementById('dealer-cards');
+        dealerContainer.innerHTML = '';
+        this.dealerHand.forEach(card => {
+            dealerContainer.appendChild(this.createCardElement(card));
+        });
+
+        // Update player cards
+        const playerContainer = document.getElementById('player-cards');
+        playerContainer.innerHTML = '';
+        this.playerHand.forEach(card => {
+            playerContainer.appendChild(this.createCardElement(card));
+        });
+
+        // Update scores
+        const dealerScore = this.calculateHand(this.dealerHand);
+        const playerScore = this.calculateHand(this.playerHand);
+
+        document.getElementById('dealer-score').textContent =
+            this.dealerHand.some(c => c.hidden) ? `(${this.calculateHand([this.dealerHand[0]])})` : `(${dealerScore})`;
+        document.getElementById('player-score').textContent = `(${playerScore})`;
+    }
+
+    createCardElement(card) {
+        const div = document.createElement('div');
+        const isRed = card.suit === '♥' || card.suit === '♦';
+
+        div.className = `card ${card.hidden ? 'hidden' : (isRed ? 'red' : 'black')}`;
+        if (card.bonus) div.classList.add('bonus');
+
+        if (!card.hidden) {
+            div.innerHTML = `
+                <span class="value">${card.value}</span>
+                <span class="suit">${card.suit}</span>
+            `;
+        }
+
+        return div;
     }
 }
 
 // Initialize game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new SlotMachine();
+    new TripleThreatGame();
 });
