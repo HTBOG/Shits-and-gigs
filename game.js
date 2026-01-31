@@ -335,6 +335,8 @@ class TripleThreatGame {
         document.getElementById('bet-up').addEventListener('click', () => this.changeBet(this.betStep));
         document.getElementById('bet-down').addEventListener('click', () => this.changeBet(-this.betStep));
         document.getElementById('max-bet-btn').addEventListener('click', () => this.setMaxBet());
+        document.getElementById('max-up').addEventListener('click', () => this.changeMaxBet(50));
+        document.getElementById('max-down').addEventListener('click', () => this.changeMaxBet(-50));
 
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && this.currentStage === 'slots' && !this.isSpinning) {
@@ -342,6 +344,19 @@ class TripleThreatGame {
                 this.spin();
             }
         });
+    }
+
+    changeMaxBet(amount) {
+        const newMax = this.maxBet + amount;
+        if (newMax >= 50 && newMax <= 1000) {
+            this.maxBet = newMax;
+            document.getElementById('max-bet-value').textContent = this.maxBet;
+            // Adjust current bet if it exceeds new max
+            if (this.bet > this.maxBet) {
+                this.bet = this.maxBet;
+                this.updateDisplay();
+            }
+        }
     }
 
     changeBet(amount) {

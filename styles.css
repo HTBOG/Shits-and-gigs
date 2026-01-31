@@ -321,6 +321,54 @@ h1 {
     cursor: not-allowed;
 }
 
+.max-btn {
+    padding: 5px 8px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    color: #ffd700;
+    background: #2a2a4a;
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.max-bet-setting {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 0.65rem;
+    color: #888;
+}
+
+.max-bet-setting span {
+    color: #888;
+}
+
+#max-bet-value {
+    color: #ffd700;
+    font-weight: bold;
+    min-width: 24px;
+    text-align: center;
+}
+
+.setting-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid #666;
+    background: #2a2a4a;
+    color: #888;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.setting-btn:hover {
+    border-color: #ffd700;
+    color: #ffd700;
+}
+
 /* ========== PLINKO ========== */
 .plinko-container {
     display: flex;
