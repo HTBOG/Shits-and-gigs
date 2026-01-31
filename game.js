@@ -392,7 +392,7 @@ class TripleThreatGame {
         return new Promise(resolve => {
             const container = reel.querySelector('.symbols');
             const symbols = container.querySelectorAll('.symbol');
-            const symbolHeight = 90;
+            const symbolHeight = 55;
             const finalPos = symbols.length - 3;
 
             symbols[finalPos].textContent = this.finalSymbols[index].emoji;
@@ -474,7 +474,7 @@ class TripleThreatGame {
     initPlinko() {
         this.canvas = document.getElementById('plinko-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.plinkoSlots = ['2', '3', '4', '5', 'A', '5', '4', '3', '2'];
+        this.plinkoSlots = ['2', '3', '4', 'A', '4', '3', '2'];
         this.plinkoBall = null;
         this.plinkoPegs = [];
         this.isDropping = false;
@@ -484,26 +484,26 @@ class TripleThreatGame {
 
     startPlinko() {
         this.plinkoPegs = [];
-        const rows = 8;
-        const startY = 40;
-        const rowHeight = 40;
+        const rows = 6;
+        const startY = 25;
+        const rowHeight = 28;
 
         for (let row = 0; row < rows; row++) {
             const pegsInRow = row + 3;
-            const rowWidth = (pegsInRow - 1) * 38;
+            const rowWidth = (pegsInRow - 1) * 24;
             const startX = (this.canvas.width - rowWidth) / 2;
 
             for (let peg = 0; peg < pegsInRow; peg++) {
                 this.plinkoPegs.push({
-                    x: startX + peg * 38,
+                    x: startX + peg * 24,
                     y: startY + row * rowHeight,
-                    radius: 5
+                    radius: 4
                 });
             }
         }
 
         this.drawPlinkoBoard();
-        this.updateSectionStatus('plinko', `Drop ${this.plinkoBalls} ball${this.plinkoBalls > 1 ? 's' : ''}!`);
+        this.updateSectionStatus('plinko', `${this.plinkoBalls} balls`);
 
         document.getElementById('drop-btn').disabled = false;
         document.getElementById('skip-plinko-btn').disabled = false;
@@ -519,17 +519,17 @@ class TripleThreatGame {
             this.ctx.fillStyle = '#ffd700';
             this.ctx.fill();
             this.ctx.strokeStyle = '#cc9900';
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 1;
             this.ctx.stroke();
         });
 
         if (this.plinkoBall) {
             this.ctx.beginPath();
-            this.ctx.arc(this.plinkoBall.x, this.plinkoBall.y, 10, 0, Math.PI * 2);
+            this.ctx.arc(this.plinkoBall.x, this.plinkoBall.y, 6, 0, Math.PI * 2);
             this.ctx.fillStyle = '#ff6b6b';
             this.ctx.fill();
             this.ctx.strokeStyle = '#cc4444';
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 1;
             this.ctx.stroke();
         }
     }
@@ -552,8 +552,8 @@ class TripleThreatGame {
         document.getElementById('drop-btn').disabled = true;
 
         this.plinkoBall = {
-            x: this.canvas.width / 2 + (Math.random() - 0.5) * 30,
-            y: 15,
+            x: this.canvas.width / 2 + (Math.random() - 0.5) * 20,
+            y: 10,
             vx: 0,
             vy: 0
         };
@@ -562,7 +562,7 @@ class TripleThreatGame {
     }
 
     animatePlinkoBall() {
-        const gravity = 0.25;
+        const gravity = 0.2;
         const bounce = 0.7;
         const friction = 0.99;
 
@@ -572,12 +572,12 @@ class TripleThreatGame {
             this.plinkoBall.x += this.plinkoBall.vx;
             this.plinkoBall.y += this.plinkoBall.vy;
 
-            if (this.plinkoBall.x < 15) {
-                this.plinkoBall.x = 15;
+            if (this.plinkoBall.x < 10) {
+                this.plinkoBall.x = 10;
                 this.plinkoBall.vx *= -bounce;
             }
-            if (this.plinkoBall.x > this.canvas.width - 15) {
-                this.plinkoBall.x = this.canvas.width - 15;
+            if (this.plinkoBall.x > this.canvas.width - 10) {
+                this.plinkoBall.x = this.canvas.width - 10;
                 this.plinkoBall.vx *= -bounce;
             }
 
@@ -585,7 +585,7 @@ class TripleThreatGame {
                 const dx = this.plinkoBall.x - peg.x;
                 const dy = this.plinkoBall.y - peg.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const minDist = 10 + peg.radius;
+                const minDist = 6 + peg.radius;
 
                 if (dist < minDist) {
                     const nx = dx / dist;
@@ -593,14 +593,14 @@ class TripleThreatGame {
                     this.plinkoBall.x = peg.x + nx * minDist;
                     this.plinkoBall.y = peg.y + ny * minDist;
                     const dot = this.plinkoBall.vx * nx + this.plinkoBall.vy * ny;
-                    this.plinkoBall.vx = (this.plinkoBall.vx - 2 * dot * nx) * bounce + (Math.random() - 0.5) * 2;
+                    this.plinkoBall.vx = (this.plinkoBall.vx - 2 * dot * nx) * bounce + (Math.random() - 0.5) * 1.5;
                     this.plinkoBall.vy = (this.plinkoBall.vy - 2 * dot * ny) * bounce;
                 }
             });
 
             this.drawPlinkoBoard();
 
-            if (this.plinkoBall.y >= this.canvas.height - 15) {
+            if (this.plinkoBall.y >= this.canvas.height - 10) {
                 this.landBall();
             } else {
                 requestAnimationFrame(animate);
@@ -611,8 +611,8 @@ class TripleThreatGame {
     }
 
     landBall() {
-        const slotWidth = this.canvas.width / 9;
-        const slotIndex = Math.min(8, Math.max(0, Math.floor(this.plinkoBall.x / slotWidth)));
+        const slotWidth = this.canvas.width / 7;
+        const slotIndex = Math.min(6, Math.max(0, Math.floor(this.plinkoBall.x / slotWidth)));
         const cardValue = this.plinkoSlots[slotIndex];
 
         const slots = document.querySelectorAll('.plinko-slot');
