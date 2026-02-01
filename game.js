@@ -299,24 +299,37 @@ class TripleThreatGame {
             document.getElementById('reel2'),
             document.getElementById('reel3')
         ];
+        console.log('Reels found:', this.reels.map(r => r ? r.id : 'null'));
+
         this.isSpinning = false;
         this.finalSymbols = [];
 
         this.setupReelSymbols();
         this.bindSlotEvents();
+        console.log('Slots initialized');
     }
 
     setupReelSymbols() {
-        this.reels.forEach(reel => {
+        this.reels.forEach((reel, reelIndex) => {
+            if (!reel) {
+                console.error('Reel', reelIndex, 'not found');
+                return;
+            }
             const container = reel.querySelector('.symbols');
+            if (!container) {
+                console.error('Symbols container not found in reel', reelIndex);
+                return;
+            }
             container.innerHTML = '';
             container.style.transform = 'translateY(0)';
+            container.style.top = '0';
             for (let i = 0; i < 20; i++) {
                 const div = document.createElement('div');
                 div.className = 'symbol';
                 div.textContent = this.getRandomSymbol().emoji;
                 container.appendChild(div);
             }
+            console.log('Reel', reelIndex, 'setup with', container.children.length, 'symbols');
         });
     }
 
@@ -375,7 +388,11 @@ class TripleThreatGame {
     }
 
     async spin() {
-        if (this.isSpinning || this.credits < this.bet) return;
+        console.log('Spin called, isSpinning:', this.isSpinning, 'credits:', this.credits, 'bet:', this.bet);
+        if (this.isSpinning || this.credits < this.bet) {
+            console.log('Spin blocked - isSpinning:', this.isSpinning, 'not enough credits:', this.credits < this.bet);
+            return;
+        }
 
         this.isSpinning = true;
         document.getElementById('spin-btn').disabled = true;
@@ -391,9 +408,12 @@ class TripleThreatGame {
             this.getRandomSymbol(),
             this.getRandomSymbol()
         ];
+        console.log('Final symbols:', this.finalSymbols.map(s => s.emoji));
 
         try {
+            console.log('Starting animation...');
             await this.animateReels();
+            console.log('Animation complete, checking win...');
             this.checkSlotWin();
         } catch (err) {
             console.error('Spin error:', err);
@@ -402,6 +422,7 @@ class TripleThreatGame {
         }
 
         this.isSpinning = false;
+        console.log('Spin finished');
     }
 
     async animateReels() {
@@ -416,7 +437,10 @@ class TripleThreatGame {
             const symbolHeight = 55;
             const finalPos = symbols.length - 3;
 
+            console.log('animateReel', index, '- symbols:', symbols.length, 'finalPos:', finalPos);
+
             if (symbols.length === 0 || !symbols[finalPos]) {
+                console.log('animateReel', index, '- early resolve (no symbols)');
                 resolve();
                 return;
             }
@@ -426,6 +450,7 @@ class TripleThreatGame {
 
             const startTime = Date.now();
             const totalDistance = (symbols.length - 3) * symbolHeight;
+            console.log('animateReel', index, '- totalDistance:', totalDistance);
 
             const randomize = setInterval(() => {
                 symbols.forEach((s, i) => {
