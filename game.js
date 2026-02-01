@@ -392,8 +392,14 @@ class TripleThreatGame {
             this.getRandomSymbol()
         ];
 
-        await this.animateReels();
-        this.checkSlotWin();
+        try {
+            await this.animateReels();
+            this.checkSlotWin();
+        } catch (err) {
+            console.error('Spin error:', err);
+            this.showMessage('Error - try again', 'lose');
+            document.getElementById('spin-btn').disabled = false;
+        }
 
         this.isSpinning = false;
     }
@@ -410,11 +416,16 @@ class TripleThreatGame {
             const symbolHeight = 55;
             const finalPos = symbols.length - 3;
 
+            if (symbols.length === 0 || !symbols[finalPos]) {
+                resolve();
+                return;
+            }
+
             symbols[finalPos].textContent = this.finalSymbols[index].emoji;
             reel.classList.add('spinning');
 
             const startTime = Date.now();
-            const totalDistance = (symbols.length - 4) * symbolHeight;
+            const totalDistance = (symbols.length - 3) * symbolHeight;
 
             const randomize = setInterval(() => {
                 symbols.forEach((s, i) => {
